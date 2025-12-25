@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Milonga</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght:700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-cyan: #00fff9;
+            --neon-pink: #ff0080;
+            --neon-purple: #bf00ff;
+            --neon-yellow: #ffff00;
+            --neon-orange: #ff6b00;
+            --dark-bg: #0a0014;
+            --grid-color: rgba(0, 255, 249, 0.1);
+        }
+
+        body {
+            background: radial-gradient(circle at center, #1a0033 0%, var(--dark-bg) 100%);
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--neon-cyan);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 1rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, var(--grid-color) 2px, var(--grid-color) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, var(--grid-color) 2px, var(--grid-color) 4px);
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        .game-container {
+            position: relative;
+            z-index: 1;
+            max-width: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: clamp(1.5rem, 5vw, 3.5rem);
+            text-align: center;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            animation: glow-pulse 3s ease-in-out infinite;
+            text-shadow: 0 0 20px rgba(0, 255, 249, 0.5);
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { filter: brightness(1) drop-shadow(0 0 10px var(--neon-cyan)); }
+            50% { filter: brightness(1.3) drop-shadow(0 0 20px var(--neon-pink)); }
+        }
+
+        .info-panel {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: clamp(0.8rem, 2.5vw, 1.1rem);
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .info-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+
+        .info-value {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: clamp(1.2rem, 4vw, 1.8rem);
+            color: var(--neon-yellow);
+            text-shadow: 0 0 10px var(--neon-yellow);
+        }
+
+        #progress {
+            color: var(--neon-cyan);
+            text-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        canvas {
+            display: block;
+            border: 3px solid var(--neon-cyan);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 30px var(--neon-cyan),
+                0 0 60px rgba(0, 255, 249, 0.5),
+                inset 0 0 30px rgba(0, 255, 249, 0.1);
+            background: radial-gradient(circle at center, rgba(26, 0, 51, 0.9) 0%, rgba(10, 0, 20, 0.95) 100%);
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: crosshair;
+            max-width: min(90vw, 90vh, 600px);
+            max-height: min(90vw, 90vh, 600px);
+            width: 600px;
+            height: 600px;
+        }
+
+        .controls {
+            margin-top: 1rem;
+            text-align: center;
+            font-size: clamp(0.7rem, 2vw, 0.9rem);
+            opacity: 0.8;
+            max-width: 90%;
+            padding: 0 1rem;
+        }
+
+        .controls p {
+            margin: 0.3rem 0;
+            letter-spacing: 0.05em;
+        }
+
+        .game-over, .game-won {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 0, 20, 0.95);
+            border: 3px solid var(--neon-pink);
+            border-radius: 20px;
+            padding: 3rem 4rem;
+            text-align: center;
+            box-shadow: 0 0 50px var(--neon-pink);
+            display: none;
+            z-index: 10;
+            animation: popup 0.3s ease-out;
+        }
+
+        @keyframes popup {
+            from {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .game-won {
+            border-color: var(--neon-yellow);
+            box-shadow: 0 0 50px var(--neon-yellow);
+        }
+
+        .game-over h2, .game-won h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--neon-pink);
+            text-shadow: 0 0 20px var(--neon-pink);
+        }
+
+        .game-won h2 {
+            color: var(--neon-yellow);
+            text-shadow: 0 0 20px var(--neon-yellow);
+        }
+
+        .game-over p, .game-won p {
+            font-size: 1.2rem;
+            margin: 1rem 0;
+        }
+
+        button {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            padding: 1rem 2.5rem;
+            margin-top: 1rem;
+            background: transparent;
+            border: 2px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        button:hover {
+            background: var(--neon-cyan);
+            color: var(--dark-bg);
+            box-shadow: 0 0 30px var(--neon-cyan);
+            transform: scale(1.05);
+        }
+
+        .lives-container {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 0.5rem;
+        }
+
+        .life {
+            width: 12px;
+            height: 12px;
+            background: var(--neon-pink);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-pink);
+            animation: life-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes life-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+
+        .life.lost {
+            background: rgba(255, 0, 128, 0.2);
+            box-shadow: none;
+            animation: none;
+        }
+        
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            h1 {
+                margin-bottom: 0.5rem;
+                letter-spacing: 0.1em;
+            }
+            
+            .info-panel {
+                gap: 0.5rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .info-label {
+                font-size: 0.7rem;
+            }
+            
+            .controls {
+                margin-top: 0.5rem;
+            }
+            
+            .game-over, .game-won {
+                padding: 2rem;
+                max-width: 90%;
+            }
+            
+            .game-over h2, .game-won h2 {
+                font-size: 1.8rem;
+            }
+            
+            .game-over p, .game-won p {
+                font-size: 1rem;
+            }
+            
+            button {
+                font-size: 0.9rem;
+                padding: 0.8rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Neon Milonga</h1>
+        
+        <div class="info-panel">
+            <div class="info-item">
+                <div class="info-label">Level</div>
+                <div class="info-value" id="level">1</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Score</div>
+                <div class="info-value" id="score">0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Progress</div>
+                <div class="info-value" id="progress">0%</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Lives</div>
+                <div class="lives-container" id="lives">
+                    <div class="life"></div>
+                    <div class="life"></div>
+                    <div class="life"></div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+        <div class="controls">
+            <p><strong>Goal:</strong> Complete a lap around this crowded milonga</p>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>Tanda Failed</h2>
+            <p>Final Score: <span id="finalScore"></span></p>
+            <button onclick="restartGame()">Dance Again</button>
+        </div>
+
+        <div class="game-won" id="gameWon">
+            <h2>Dance Complete</h2>
+            <p>You made it around!</p>
+            <p>Score: <span id="wonScore"></span></p>
+            <button onclick="nextLevel()">Next Dance</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        let gameState = {
+            level: 1,
+            score: 0,
+            lives: 3,
+            gameActive: true
+        };
+
+        // Player
+        const player = {
+            x: centerX + 180, // Start at angle 0, radius 180
+            y: centerY,
+            vx: 0,
+            vy: 0,
+            speed: 2.5,
+            friction: 0.88,
+            size: 10,
+            color: '#ffff00',
+            lastProgressMilestone: 0,
+            previousAngle: 0,
+            started: false, // Must move away from start before checkpoints activate
+            hasWon: false, // Prevent multiple win triggers
+            // Checkpoint system for lap tracking - simple thresholds
+            checkpoints: {
+                quarter: false,      // Passed 90 degrees (π/2)
+                half: false,         // Passed 180 degrees (π)
+                threeQuarter: false, // Passed 270 degrees (3π/2)
+                nearFinish: false    // Passed 315 degrees (7π/4)
+            },
+            lapProgress: 0 // 0-100% progress
+        };
+
+        // Ring configuration
+        const innerRadius = 100; // Large hole in the middle
+        const outerRadius = 260; // Outer edge
+        const playableRadius = (innerRadius + outerRadius) / 2; // Middle of the ring
+
+        // Obstacles
+        let obstacles = [];
+
+        function initObstacles() {
+            obstacles = [];
+            const baseSpeed = 0.3 + (gameState.level - 1) * 0.15;
+            const numObstacles = 12 + gameState.level * 3;
+            
+            // Player starts at angle 0° (right side), radius ~180
+            const playerStartAngle = 0;
+            const playerStartRadius = 180;
+            const safeZoneAngle = Math.PI / 3; // 60 degrees on each side of start
+            const safeZoneRadius = 80; // Minimum distance from player start position
+            
+            for (let i = 0; i < numObstacles; i++) {
+                let angle, distance, x, y;
+                let attempts = 0;
+                const maxAttempts = 50;
+                
+                do {
+                    // Random position within the ring (between inner and outer radius)
+                    angle = Math.random() * Math.PI * 2;
+                    distance = innerRadius + 20 + Math.random() * (outerRadius - innerRadius - 40);
+                    
+                    x = centerX + Math.cos(angle) * distance;
+                    y = centerY + Math.sin(angle) * distance;
+                    
+                    // Calculate distance from player start position
+                    const playerStartX = centerX + Math.cos(playerStartAngle) * playerStartRadius;
+                    const playerStartY = centerY + Math.sin(playerStartAngle) * playerStartRadius;
+                    const distFromStart = Math.sqrt(
+                        Math.pow(x - playerStartX, 2) + 
+                        Math.pow(y - playerStartY, 2)
+                    );
+                    
+                    // Check if obstacle is in safe zone (too close to start)
+                    // Also check angle - avoid spawning in the start/finish area (330-30 degrees)
+                    const normalizedAngle = angle < 0 ? angle + Math.PI * 2 : angle;
+                    const angleDeg = normalizedAngle * 180 / Math.PI;
+                    const inStartFinishZone = (angleDeg <= 30 || angleDeg >= 330);
+                    
+                    // Accept position if it's far enough from start OR outside the start/finish zone
+                    if (distFromStart >= safeZoneRadius || !inStartFinishZone) {
+                        break; // Good position found
+                    }
+                    
+                    attempts++;
+                } while (attempts < maxAttempts);
+                
+                // If we couldn't find a good spot after max attempts, use the last position
+                // (better than infinite loop)
+                
+                // Calculate velocity: 80% move counter-clockwise, 20% move randomly
+                let vx, vy;
+                const isCounterClockwise = Math.random() < 0.8; // 80% chance
+                
+                if (isCounterClockwise) {
+                    // Counter-clockwise tangential movement with strong radial variation
+                    const dx = x - centerX;
+                    const dy = y - centerY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Tangent vector for counter-clockwise: (dy, -dx) normalized
+                    const tangentSpeed = baseSpeed * (0.8 + Math.random() * 0.4);
+                    const tangentVx = (dy / dist) * tangentSpeed;
+                    const tangentVy = (-dx / dist) * tangentSpeed;
+                    
+                    // Add stronger radial component with inward bias
+                    const ringWidth = outerRadius - innerRadius;
+                    const distFromInner = dist - innerRadius;
+                    const positionRatio = distFromInner / ringWidth; // 0 = inner, 1 = outer
+                    
+                    const radialSpeed = tangentSpeed * (0.3 + Math.random() * 0.3);
+                    const inwardBias = positionRatio > 0.6 ? 0.8 : (positionRatio > 0.4 ? 0.6 : 0.4);
+                    const radialDirection = Math.random() < inwardBias ? -1 : 1;
+                    const radialVx = (dx / dist) * radialSpeed * radialDirection;
+                    const radialVy = (dy / dist) * radialSpeed * radialDirection;
+                    
+                    vx = tangentVx + radialVx;
+                    vy = tangentVy + radialVy;
+                } else {
+                    // Random movement (original behavior for 20%)
+                    vx = (Math.random() - 0.5) * baseSpeed;
+                    vy = (Math.random() - 0.5) * baseSpeed;
+                }
+                
+                // Speed variations: 10% stationary, 10% double speed, 80% normal
+                const speedRoll = Math.random();
+                let speedMultiplier = 1.0; // Normal speed
+                
+                if (speedRoll < 0.1) {
+                    // 10% stationary dancers
+                    speedMultiplier = 0;
+                    vx = 0;
+                    vy = 0;
+                } else if (speedRoll < 0.2) {
+                    // 10% fast dancers (double speed)
+                    speedMultiplier = 2.0;
+                    vx *= 2;
+                    vy *= 2;
+                }
+                
+                // Random skin tones for diversity (Fitzpatrick scale)
+                const skinTones = ['🏻', '🏼', '🏽', '🏾', '🏿', '']; // Including no modifier for yellow default
+                const skinTone1 = skinTones[Math.floor(Math.random() * skinTones.length)];
+                const skinTone2 = skinTones[Math.floor(Math.random() * skinTones.length)];
+                
+                obstacles.push({
+                    x: x,
+                    y: y,
+                    vx: vx,
+                    vy: vy,
+                    size: 15, // Emoji size
+                    separation: 25 + Math.random() * 10, // Distance between dancers
+                    color: getObstacleColor(i),
+                    isCounterClockwise: isCounterClockwise, // Track movement type
+                    speedMultiplier: speedMultiplier, // Track speed type (0 = stationary, 1 = normal, 2 = fast)
+                    femaleFirst: Math.random() < 0.5, // Random order: 💃🕺 or 🕺💃
+                    skinTone1: skinTone1, // Skin tone for first dancer
+                    skinTone2: skinTone2  // Skin tone for second dancer
+                });
+            }
+        }
+
+        function getObstacleColor(index) {
+            const colors = ['#ff0080', '#bf00ff', '#00fff9', '#ff6b00', '#00ff88'];
+            return colors[index % colors.length];
+        }
+
+        function drawBackground() {
+            // Draw inner circle (hole)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw inner edge glow (reduced)
+            ctx.strokeStyle = 'rgba(191, 0, 255, 0.6)';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#bf00ff';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Draw outer boundary (reduced)
+            ctx.strokeStyle = 'rgba(0, 255, 249, 0.6)';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00fff9';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Checkpoint indicators removed from display (logic still works in background)
+
+            // Draw start/finish line (reduced glow)
+            const startX1 = centerX + Math.cos(0) * (innerRadius + 10);
+            const startY1 = centerY + Math.sin(0) * (innerRadius + 10);
+            const startX2 = centerX + Math.cos(0) * (outerRadius - 10);
+            const startY2 = centerY + Math.sin(0) * (outerRadius - 10);
+            
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 4;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#ffff00';
+            ctx.beginPath();
+            ctx.moveTo(startX1, startY1);
+            ctx.lineTo(startX2, startY2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Checkered pattern on finish line
+            const numChecks = 8;
+            for (let i = 0; i < numChecks; i++) {
+                const t1 = i / numChecks;
+                const t2 = (i + 1) / numChecks;
+                const x1 = startX1 + (startX2 - startX1) * t1;
+                const y1 = startY1 + (startY2 - startY1) * t1;
+                const x2 = startX1 + (startX2 - startX1) * t2;
+                const y2 = startY1 + (startY2 - startY1) * t2;
+                
+                ctx.strokeStyle = i % 2 === 0 ? '#ffffff' : '#000000';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+        }
+
+        function drawPlayer() {
+            const x = player.x;
+            const y = player.y;
+
+            // Reduced glow effect (less fuzzy)
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, player.size * 1.3);
+            gradient.addColorStop(0, player.color);
+            gradient.addColorStop(0.6, player.color + '44');
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, player.size * 1.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Core
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(x, y, player.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inner highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(x - 2, y - 2, player.size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Direction indicator based on velocity
+            if (Math.abs(player.vx) > 0.1 || Math.abs(player.vy) > 0.1) {
+                const dirAngle = Math.atan2(player.vy, player.vx);
+                const dirX = x + Math.cos(dirAngle) * (player.size + 5);
+                const dirY = y + Math.sin(dirAngle) * (player.size + 5);
+                ctx.strokeStyle = player.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(dirX, dirY);
+                ctx.stroke();
+            }
+        }
+
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                // Calculate direction angle from velocity
+                const velocityMag = Math.sqrt(obstacle.vx * obstacle.vx + obstacle.vy * obstacle.vy);
+                let dirAngle;
+                if (velocityMag > 0.05) {
+                    dirAngle = Math.atan2(obstacle.vy, obstacle.vx);
+                } else {
+                    // If moving very slowly, use random angle
+                    if (!obstacle.dirAngle) obstacle.dirAngle = Math.random() * Math.PI * 2;
+                    dirAngle = obstacle.dirAngle;
+                }
+
+                // Calculate positions of the two dancers
+                const offset = obstacle.separation / 2;
+                const x1 = obstacle.x + Math.cos(dirAngle) * offset;
+                const y1 = obstacle.y + Math.sin(dirAngle) * offset;
+                const x2 = obstacle.x - Math.cos(dirAngle) * offset;
+                const y2 = obstacle.y - Math.sin(dirAngle) * offset;
+
+                // Set font size for emojis
+                ctx.font = obstacle.size * 2 + 'px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Determine emoji order and apply skin tones
+                const emoji1 = (obstacle.femaleFirst ? '💃' : '🕺') + obstacle.skinTone1;
+                const emoji2 = (obstacle.femaleFirst ? '🕺' : '💃') + obstacle.skinTone2;
+                
+                // Draw first dancer (no glow)
+                ctx.fillText(emoji1, x1, y1);
+                
+                // Draw second dancer (no glow)
+                ctx.fillText(emoji2, x2, y2);
+            });
+        }
+
+        function updateObstacles() {
+            obstacles.forEach(obstacle => {
+                // Update position
+                obstacle.x += obstacle.vx;
+                obstacle.y += obstacle.vy;
+
+                // Store direction angle based on velocity
+                const velocityMag = Math.sqrt(obstacle.vx * obstacle.vx + obstacle.vy * obstacle.vy);
+                if (velocityMag > 0.05) {
+                    obstacle.dirAngle = Math.atan2(obstacle.vy, obstacle.vx);
+                }
+
+                // Check distance from center
+                const dx = obstacle.x - centerX;
+                const dy = obstacle.y - centerY;
+                const distFromCenter = Math.sqrt(dx * dx + dy * dy);
+
+                // Bounce off outer boundary
+                if (distFromCenter > outerRadius - obstacle.size - obstacle.separation - 10) {
+                    // Normalize direction vector
+                    const nx = dx / distFromCenter;
+                    const ny = dy / distFromCenter;
+                    
+                    // Push back inside boundary
+                    const overlap = distFromCenter - (outerRadius - obstacle.size - obstacle.separation - 10);
+                    obstacle.x -= nx * overlap;
+                    obstacle.y -= ny * overlap;
+                    
+                    // Skip velocity updates for stationary dancers
+                    if (obstacle.speedMultiplier === 0) {
+                        obstacle.vx = 0;
+                        obstacle.vy = 0;
+                    } else if (obstacle.isCounterClockwise) {
+                        // If counter-clockwise obstacle, restore tangential velocity with strong inward push
+                        const speed = Math.sqrt(obstacle.vx * obstacle.vx + obstacle.vy * obstacle.vy);
+                        const dx2 = obstacle.x - centerX;
+                        const dy2 = obstacle.y - centerY;
+                        const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                        
+                        // Tangential component (counter-clockwise)
+                        const tangentSpeed = speed * 0.8; // Reduce speed on bounce
+                        const tangentVx = (dy2 / dist2) * tangentSpeed;
+                        const tangentVy = (-dx2 / dist2) * tangentSpeed;
+                        
+                        // Strong radial component (push inward from outer wall)
+                        const radialSpeed = speed * (0.5 + Math.random() * 0.3); // 50-80% inward!
+                        const radialVx = (-dx2 / dist2) * radialSpeed;
+                        const radialVy = (-dy2 / dist2) * radialSpeed;
+                        
+                        obstacle.vx = tangentVx + radialVx;
+                        obstacle.vy = tangentVy + radialVy;
+                    } else {
+                        // Reflect velocity for random obstacles
+                        const dot = obstacle.vx * nx + obstacle.vy * ny;
+                        obstacle.vx = obstacle.vx - 2 * dot * nx;
+                        obstacle.vy = obstacle.vy - 2 * dot * ny;
+                    }
+                }
+
+                // Bounce off inner boundary (hole)
+                if (distFromCenter < innerRadius + obstacle.size + obstacle.separation + 10) {
+                    // Normalize direction vector
+                    const nx = dx / distFromCenter;
+                    const ny = dy / distFromCenter;
+                    
+                    // Push away from hole
+                    const overlap = (innerRadius + obstacle.size + obstacle.separation + 10) - distFromCenter;
+                    obstacle.x += nx * overlap;
+                    obstacle.y += ny * overlap;
+                    
+                    // Skip velocity updates for stationary dancers
+                    if (obstacle.speedMultiplier === 0) {
+                        obstacle.vx = 0;
+                        obstacle.vy = 0;
+                    } else if (obstacle.isCounterClockwise) {
+                        // If counter-clockwise obstacle, restore tangential velocity
+                        const speed = Math.sqrt(obstacle.vx * obstacle.vx + obstacle.vy * obstacle.vy);
+                        const dx2 = obstacle.x - centerX;
+                        const dy2 = obstacle.y - centerY;
+                        const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                        
+                        // Tangential component (counter-clockwise)
+                        const tangentSpeed = speed * 0.8; // Reduce speed on bounce
+                        const tangentVx = (dy2 / dist2) * tangentSpeed;
+                        const tangentVy = (-dx2 / dist2) * tangentSpeed;
+                        
+                        // Moderate radial component (push outward from inner wall)
+                        const radialSpeed = speed * (0.25 + Math.random() * 0.2); // 25-45% outward
+                        const radialVx = (dx2 / dist2) * radialSpeed;
+                        const radialVy = (dy2 / dist2) * radialSpeed;
+                        
+                        obstacle.vx = tangentVx + radialVx;
+                        obstacle.vy = tangentVy + radialVy;
+                    } else {
+                        // Reflect velocity for random obstacles (push away from center)
+                        const dot = obstacle.vx * nx + obstacle.vy * ny;
+                        obstacle.vx = obstacle.vx - 2 * dot * nx;
+                        obstacle.vy = obstacle.vy - 2 * dot * ny;
+                    }
+                }
+
+                // Random direction changes (only for non-counter-clockwise obstacles)
+                if (!obstacle.isCounterClockwise && Math.random() < 0.02) {
+                    obstacle.vx += (Math.random() - 0.5) * 0.2;
+                    obstacle.vy += (Math.random() - 0.5) * 0.2;
+                    
+                    // Limit speed
+                    const speed = Math.sqrt(obstacle.vx * obstacle.vx + obstacle.vy * obstacle.vy);
+                    const maxSpeed = 0.5 + gameState.level * 0.2;
+                    if (speed > maxSpeed) {
+                        obstacle.vx = (obstacle.vx / speed) * maxSpeed;
+                        obstacle.vy = (obstacle.vy / speed) * maxSpeed;
+                    }
+                }
+                
+                // For counter-clockwise obstacles, occasionally adjust speed and trajectory (skip stationary)
+                if (obstacle.isCounterClockwise && obstacle.speedMultiplier > 0 && Math.random() < 0.015) {
+                    const currentSpeed = Math.sqrt(obstacle.vx * obstacle.vx + obstacle.vy * obstacle.vy);
+                    const baseSpeed = 0.3 + (gameState.level - 1) * 0.15;
+                    const targetSpeed = baseSpeed * (0.8 + Math.random() * 0.4) * obstacle.speedMultiplier;
+                    
+                    if (Math.abs(currentSpeed - targetSpeed) > 0.1) {
+                        const dx2 = obstacle.x - centerX;
+                        const dy2 = obstacle.y - centerY;
+                        const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                        
+                        // Tangential velocity (counter-clockwise)
+                        const tangentVx = (dy2 / dist2) * targetSpeed;
+                        const tangentVy = (-dx2 / dist2) * targetSpeed;
+                        
+                        // Add radial component with position-based inward bias
+                        const ringWidth = outerRadius - innerRadius;
+                        const distFromInner = dist2 - innerRadius;
+                        const positionRatio = distFromInner / ringWidth;
+                        
+                        const radialSpeed = targetSpeed * (0.2 + Math.random() * 0.3);
+                        const inwardBias = positionRatio > 0.6 ? 0.75 : (positionRatio > 0.4 ? 0.55 : 0.35);
+                        const radialDirection = Math.random() < inwardBias ? -1 : 1;
+                        const radialVx = (dx2 / dist2) * radialSpeed * radialDirection;
+                        const radialVy = (dy2 / dist2) * radialSpeed * radialDirection;
+                        
+                        obstacle.vx = tangentVx + radialVx;
+                        obstacle.vy = tangentVy + radialVy;
+                    }
+                }
+            });
+        }
+
+        function checkCollisions() {
+            for (let obstacle of obstacles) {
+                // Calculate direction angle from velocity
+                const velocityMag = Math.sqrt(obstacle.vx * obstacle.vx + obstacle.vy * obstacle.vy);
+                let dirAngle;
+                if (velocityMag > 0.05) {
+                    dirAngle = Math.atan2(obstacle.vy, obstacle.vx);
+                } else {
+                    dirAngle = obstacle.dirAngle || 0;
+                }
+
+                // Calculate positions of the two circles
+                const offset = obstacle.separation / 2;
+                const x1 = obstacle.x + Math.cos(dirAngle) * offset;
+                const y1 = obstacle.y + Math.sin(dirAngle) * offset;
+                const x2 = obstacle.x - Math.cos(dirAngle) * offset;
+                const y2 = obstacle.y - Math.sin(dirAngle) * offset;
+
+                // Check collision with first circle
+                const distance1 = Math.sqrt(
+                    Math.pow(player.x - x1, 2) + 
+                    Math.pow(player.y - y1, 2)
+                );
+
+                if (distance1 < player.size + obstacle.size) {
+                    return true;
+                }
+
+                // Check collision with second circle
+                const distance2 = Math.sqrt(
+                    Math.pow(player.x - x2, 2) + 
+                    Math.pow(player.y - y2, 2)
+                );
+
+                if (distance2 < player.size + obstacle.size) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkWin() {
+            // Calculate player's angle from center
+            const dx = player.x - centerX;
+            const dy = player.y - centerY;
+            const angle = Math.atan2(dy, dx);
+            
+            // Convert to 0-360 degree range (0 to 2π)
+            let normalizedAngle = angle;
+            if (normalizedAngle < 0) {
+                normalizedAngle += Math.PI * 2;
+            }
+            
+            // Helper function to detect if we crossed a threshold going counter-clockwise
+            // Counter-clockwise means decreasing angles: 315° -> 270° -> 180° -> 90° -> 45° -> 0°
+            function crossedThresholdCCW(prevAngle, currAngle, threshold) {
+                // Detect wraparound: if angles jumped by more than π, we wrapped around 0°
+                const diff = currAngle - prevAngle;
+                const wrappedAround = Math.abs(diff) > Math.PI;
+                
+                if (wrappedAround) {
+                    // We wrapped around 0°. 
+                    // Going CCW from 1° wraps to 359° (diff > 0, diff = ~358° = ~6.24 rad)
+                    if (diff > 0) {
+                        // We went backward through 0° (e.g., 1° -> 359°)
+                        // We crossed the threshold if it's NOT in the range we jumped over
+                        // We jumped OVER the range (prevAngle, currAngle), so we crossed if threshold is outside that
+                        return threshold <= prevAngle || threshold >= currAngle;
+                    }
+                    return false;
+                } else {
+                    // Normal case: no wraparound
+                    // Going CCW means decreasing, so prevAngle > currAngle
+                    return prevAngle >= threshold && currAngle < threshold;
+                }
+            }
+            
+            // Update lap progress percentage
+            if (player.started) {
+                const deg = normalizedAngle * 180 / Math.PI;
+                let progress;
+                
+                // Calculate progress based on how far counter-clockwise from start
+                // CCW path: 0° -> 315° -> 270° -> 180° -> 90° -> 45° -> 0°
+                if (deg >= 315 || deg <= 30) {
+                    // In start/finish area
+                    if (player.checkpoints.nearFinish && deg <= 10) {
+                        progress = 100; // In finish zone with all checkpoints
+                    } else if (deg >= 315) {
+                        // Just left start: 315-360°
+                        progress = ((360 - deg) / 45) * 10; // 0-10%
+                    } else {
+                        // Approaching finish: 0-30°
+                        progress = 90 + ((30 - deg) / 30) * 10; // 90-100%
+                    }
+                } else if (deg > 270) {
+                    // 270-315°: first quarter
+                    progress = 10 + ((315 - deg) / 45) * 15; // 10-25%
+                } else if (deg > 180) {
+                    // 180-270°: second quarter
+                    progress = 25 + ((270 - deg) / 90) * 25; // 25-50%
+                } else if (deg > 90) {
+                    // 90-180°: third quarter
+                    progress = 50 + ((180 - deg) / 90) * 25; // 50-75%
+                } else if (deg > 30) {
+                    // 30-90°: final quarter
+                    progress = 75 + ((90 - deg) / 60) * 15; // 75-90%
+                }
+                
+                player.lapProgress = Math.max(0, Math.min(100, progress));
+            } else {
+                player.lapProgress = 0;
+            }
+            
+            // Check if player has left the start zone
+            if (!player.started) {
+                const deg = normalizedAngle * 180 / Math.PI;
+                if (deg > 30 && deg < 315) {
+                    player.started = true;
+                    player.previousAngle = normalizedAngle;
+                }
+                return false;
+            }
+            
+            const prevAngle = player.previousAngle || normalizedAngle;
+            
+            // Checkpoint 1: crossing through 270° going counter-clockwise
+            if (!player.checkpoints.quarter && crossedThresholdCCW(prevAngle, normalizedAngle, Math.PI * 1.5)) {
+                player.checkpoints.quarter = true;
+            }
+            
+            // Checkpoint 2: crossing through 180°
+            if (player.checkpoints.quarter && !player.checkpoints.half && 
+                crossedThresholdCCW(prevAngle, normalizedAngle, Math.PI)) {
+                player.checkpoints.half = true;
+            }
+            
+            // Checkpoint 3: crossing through 90°
+            if (player.checkpoints.half && !player.checkpoints.threeQuarter && 
+                crossedThresholdCCW(prevAngle, normalizedAngle, Math.PI * 0.5)) {
+                player.checkpoints.threeQuarter = true;
+            }
+            
+            // Checkpoint 4: crossing through 45°
+            if (player.checkpoints.threeQuarter && !player.checkpoints.nearFinish && 
+                crossedThresholdCCW(prevAngle, normalizedAngle, Math.PI * 0.25)) {
+                player.checkpoints.nearFinish = true;
+            }
+            
+            // Win condition: all checkpoints passed AND entered finish zone (0-10°)
+            if (player.checkpoints.nearFinish && !player.hasWon) {
+                const deg = normalizedAngle * 180 / Math.PI;
+                
+                // Must cross into 0-10° zone from outside (10-45° range)
+                if (crossedThresholdCCW(prevAngle, normalizedAngle, Math.PI / 18)) { // 10° threshold
+                    player.hasWon = true;
+                    player.previousAngle = normalizedAngle;
+                    return true;
+                }
+            }
+            
+            // Store current angle for next frame
+            player.previousAngle = normalizedAngle;
+            
+            return false;
+        }
+
+
+        function clearSpawnArea() {
+            // Clear obstacles near the spawn point to prevent spawn camping
+            const spawnX = centerX + 180;
+            const spawnY = centerY;
+            const safeRadius = 100; // Safe zone radius
+            
+            obstacles = obstacles.filter(obstacle => {
+                const dx = obstacle.x - spawnX;
+                const dy = obstacle.y - spawnY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                return distance > safeRadius; // Keep obstacles outside safe zone
+            });
+        }
+
+        function loseLife() {
+            gameState.lives--;
+            updateLivesDisplay();
+            
+            if (gameState.lives <= 0) {
+                gameOver();
+            } else {
+                // Reset player position
+                player.x = centerX + 180;
+                player.y = centerY;
+                player.vx = 0;
+                player.vy = 0;
+                player.lastProgressMilestone = 0;
+                player.lapProgress = 0;
+                player.previousAngle = 0;
+                player.started = false;
+                player.hasWon = false;
+                player.checkpoints = {
+                    quarter: false,
+                    half: false,
+                    threeQuarter: false,
+                    nearFinish: false
+                };
+                
+                // Clear obstacles near spawn to prevent spawn camping
+                clearSpawnArea();
+                
+                gameState.gameActive = false;
+                setTimeout(() => {
+                    gameState.gameActive = true;
+                }, 1000);
+            }
+        }
+
+        function updateLivesDisplay() {
+            const livesContainer = document.getElementById('lives');
+            const lifeElements = livesContainer.querySelectorAll('.life');
+            lifeElements.forEach((life, index) => {
+                if (index >= gameState.lives) {
+                    life.classList.add('lost');
+                } else {
+                    life.classList.remove('lost');
+                }
+            });
+        }
+
+        function gameOver() {
+            gameState.gameActive = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function winLevel() {
+            gameState.gameActive = false;
+            gameState.score += 100 * gameState.level;
+            document.getElementById('wonScore').textContent = gameState.score;
+            document.getElementById('gameWon').style.display = 'block';
+            updateScore();
+        }
+
+        function restartGame() {
+            gameState = {
+                level: 1,
+                score: 0,
+                lives: 3,
+                gameActive: true
+            };
+            player.x = centerX + 180;
+            player.y = centerY;
+            player.vx = 0;
+            player.vy = 0;
+            player.lastProgressMilestone = 0;
+            player.lapProgress = 0;
+            player.previousAngle = 0;
+            player.started = false;
+            player.hasWon = false;
+            player.checkpoints = {
+                quarter: false,
+                half: false,
+                threeQuarter: false,
+                nearFinish: false
+            };
+            initObstacles();
+            document.getElementById('gameOver').style.display = 'none';
+            updateScore();
+            updateLevel();
+            updateLivesDisplay();
+            updateProgress();
+        }
+
+        function nextLevel() {
+            gameState.level++;
+            gameState.lives = Math.min(gameState.lives + 1, 5); // Bonus life, max 5
+            player.x = centerX + 180;
+            player.y = centerY;
+            player.vx = 0;
+            player.vy = 0;
+            player.lastProgressMilestone = 0;
+            player.lapProgress = 0;
+            player.previousAngle = 0;
+            player.started = false;
+            player.hasWon = false;
+            player.checkpoints = {
+                quarter: false,
+                half: false,
+                threeQuarter: false,
+                nearFinish: false
+            };
+            gameState.gameActive = true;
+            initObstacles();
+            document.getElementById('gameWon').style.display = 'none';
+            updateLevel();
+            updateLivesDisplay();
+            updateProgress();
+            
+            // Add more lives if needed
+            const livesContainer = document.getElementById('lives');
+            while (livesContainer.children.length < gameState.lives) {
+                const life = document.createElement('div');
+                life.className = 'life';
+                livesContainer.appendChild(life);
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = gameState.score;
+        }
+
+        function updateLevel() {
+            document.getElementById('level').textContent = gameState.level;
+        }
+
+        function updateProgress() {
+            // Progress is updated in checkWin function
+            const progress = Math.floor(player.lapProgress);
+            document.getElementById('progress').textContent = progress + '%';
+            
+            // Award points for progress (every 10%)
+            const progressMilestone = Math.floor(progress / 10) * 10;
+            if (!player.lastProgressMilestone) player.lastProgressMilestone = 0;
+            if (progressMilestone > player.lastProgressMilestone) {
+                gameState.score += 5;
+                updateScore();
+                player.lastProgressMilestone = progressMilestone;
+            }
+        }
+
+        // Controls
+        const keys = {};
+        let touchActive = false;
+        let touchX = 0;
+        let touchY = 0;
+        
+        // Helper to scale coordinates from display size to canvas size
+        function getCanvasCoordinates(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            // Prevent arrow keys and WASD from scrolling the page
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {
+                e.preventDefault();
+            }
+            keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            // Prevent arrow keys and WASD from scrolling the page
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {
+                e.preventDefault();
+            }
+            keys[e.key] = false;
+        });
+        
+        // Touch controls for mobile - hold to move continuously
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameState.gameActive) return;
+            
+            const touch = e.touches[0];
+            const coords = getCanvasCoordinates(touch.clientX, touch.clientY);
+            touchX = coords.x;
+            touchY = coords.y;
+            touchActive = true;
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!gameState.gameActive || !touchActive) return;
+            
+            const touch = e.touches[0];
+            const coords = getCanvasCoordinates(touch.clientX, touch.clientY);
+            touchX = coords.x;
+            touchY = coords.y;
+        }, { passive: false });
+        
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            touchActive = false;
+        });
+        
+        canvas.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            touchActive = false;
+        });
+        
+        // Mouse controls - hold to move continuously
+        canvas.addEventListener('mousedown', (e) => {
+            if (!gameState.gameActive) return;
+            
+            const coords = getCanvasCoordinates(e.clientX, e.clientY);
+            touchX = coords.x;
+            touchY = coords.y;
+            touchActive = true;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!gameState.gameActive || !touchActive) return;
+            
+            const coords = getCanvasCoordinates(e.clientX, e.clientY);
+            touchX = coords.x;
+            touchY = coords.y;
+        });
+        
+        canvas.addEventListener('mouseup', (e) => {
+            touchActive = false;
+        });
+        
+        canvas.addEventListener('mouseleave', (e) => {
+            touchActive = false;
+        });
+
+        function handleInput() {
+            if (!gameState.gameActive) return;
+
+            // Apply acceleration based on keys
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                player.vx -= player.speed * 0.15;
+            }
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                player.vx += player.speed * 0.15;
+            }
+            if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+                player.vy -= player.speed * 0.15;
+            }
+            if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+                player.vy += player.speed * 0.15;
+            }
+            
+            // Apply acceleration based on touch/mouse hold
+            if (touchActive) {
+                // Calculate direction from touch/mouse position to player
+                const dx = player.x - touchX;
+                const dy = player.y - touchY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    // Apply continuous acceleration away from touch/mouse point
+                    const accelerationStrength = player.speed * 0.15; // Same as keyboard
+                    player.vx += (dx / distance) * accelerationStrength;
+                    player.vy += (dy / distance) * accelerationStrength;
+                }
+            }
+
+            // Apply friction
+            player.vx *= player.friction;
+            player.vy *= player.friction;
+
+            // Limit max speed
+            const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+            const maxSpeed = player.speed;
+            if (currentSpeed > maxSpeed) {
+                player.vx = (player.vx / currentSpeed) * maxSpeed;
+                player.vy = (player.vy / currentSpeed) * maxSpeed;
+            }
+
+            // Update position
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Boundary checking - keep player in the ring
+            const dx = player.x - centerX;
+            const dy = player.y - centerY;
+            const distFromCenter = Math.sqrt(dx * dx + dy * dy);
+
+            // Bounce off outer boundary
+            if (distFromCenter > outerRadius - player.size - 5) {
+                const angle = Math.atan2(dy, dx);
+                player.x = centerX + Math.cos(angle) * (outerRadius - player.size - 5);
+                player.y = centerY + Math.sin(angle) * (outerRadius - player.size - 5);
+                
+                // Reflect velocity
+                const nx = dx / distFromCenter;
+                const ny = dy / distFromCenter;
+                const dot = player.vx * nx + player.vy * ny;
+                player.vx = player.vx - 1.5 * dot * nx;
+                player.vy = player.vy - 1.5 * dot * ny;
+            }
+
+            // Bounce off inner boundary (hole)
+            if (distFromCenter < innerRadius + player.size + 5) {
+                const angle = Math.atan2(dy, dx);
+                player.x = centerX + Math.cos(angle) * (innerRadius + player.size + 5);
+                player.y = centerY + Math.sin(angle) * (innerRadius + player.size + 5);
+                
+                // Reflect velocity
+                const nx = dx / distFromCenter;
+                const ny = dy / distFromCenter;
+                const dot = player.vx * nx + player.vy * ny;
+                player.vx = player.vx - 1.5 * dot * nx;
+                player.vy = player.vy - 1.5 * dot * ny;
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawBackground();
+            drawObstacles();
+            drawPlayer();
+
+            if (gameState.gameActive) {
+                handleInput();
+                updateObstacles();
+                updateProgress();
+
+                if (checkCollisions()) {
+                    loseLife();
+                }
+
+                if (checkWin() && gameState.gameActive) {
+                    winLevel();
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize and start
+        initObstacles();
+        gameLoop();
+    </script>
+</body>
+</html>
