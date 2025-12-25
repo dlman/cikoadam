@@ -252,6 +252,45 @@
             animation: none;
         }
         
+        .music-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 50px;
+            height: 50px;
+            padding: 0;
+            margin: 0;
+            font-size: 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: rgba(0, 255, 249, 0.1);
+            border: 2px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-cyan);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .music-toggle:hover {
+            background: rgba(0, 255, 249, 0.2);
+            box-shadow: 0 0 20px var(--neon-cyan);
+        }
+
+        .music-toggle.playing {
+            color: var(--neon-yellow);
+            border-color: var(--neon-yellow);
+            box-shadow: 0 0 15px var(--neon-yellow);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
         /* Mobile responsive adjustments */
         @media (max-width: 768px) {
             h1 {
@@ -295,6 +334,8 @@
 <body>
     <div class="game-container">
         <h1>Tango Cafe Simulator</h1>
+        
+        <button class="music-toggle" id="musicToggle" title="Toggle Music">🎵</button>
         
         <div class="info-panel">
             <div class="info-item">
@@ -345,6 +386,20 @@
         const ctx = canvas.getContext('2d');
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
+        
+        // Load player image
+        const playerImage = new Image();
+        playerImage.src = 'adamcikohead.png'; // Image should be in same folder as HTML
+        
+        // Load swap sound effect
+        const swapSound = new Audio('swap.wav'); // Sound should be in same folder as HTML
+        swapSound.volume = 0.3; // Set volume to 30% so it's not too loud
+        
+        // Load background music
+        const bgMusic = new Audio('puntazo.mp3'); // Background music
+        bgMusic.loop = true; // Loop the music
+        bgMusic.volume = 0.15; // Low volume (15%)
+        let musicPlaying = false; // Music off by default
 
         let gameState = {
             level: 1,
@@ -361,7 +416,7 @@
             vy: 0,
             speed: 2.5,
             friction: 0.88,
-            size: 10,
+            size: 18,
             color: '#ffff00',
             lastProgressMilestone: 0,
             previousAngle: 0,
@@ -374,7 +429,8 @@
                 threeQuarter: false, // Passed 270 degrees (3π/2)
                 nearFinish: false    // Passed 315 degrees (7π/4)
             },
-            lapProgress: 0 // 0-100% progress
+            lapProgress: 0, // 0-100% progress
+            facingRight: true // Track which way the image is facing
         };
 
         // Ring configuration
@@ -390,8 +446,10 @@
             const baseSpeed = 0.3 + (gameState.level - 1) * 0.15;
             const numObstacles = 12 + gameState.level * 3;
             
-            // Determine how many inner wall huggers (2-3 based on level)
-            const numInnerWallHuggers = Math.min(2 + Math.floor(gameState.level / 3), 3);
+            // Determine how many wall huggers
+            const numInnerWallHuggers = Math.min(2 + Math.floor(gameState.level / 3), 3); // 2-3 inner wall
+            const numOuterWallHuggers = Math.min(1 + Math.floor(gameState.level / 4), 2); // 1-2 outer wall
+            const totalWallHuggers = numInnerWallHuggers + numOuterWallHuggers;
             
             // Player starts at angle 0° (right side), radius ~180
             const playerStartAngle = 0;
@@ -404,8 +462,9 @@
                 let attempts = 0;
                 const maxAttempts = 50;
                 
-                // First numInnerWallHuggers obstacles are forced to be inner wall huggers
+                // First obstacles are wall huggers
                 const forceInnerWall = i < numInnerWallHuggers;
+                const forceOuterWall = i >= numInnerWallHuggers && i < totalWallHuggers;
                 
                 do {
                     // Random position within the ring (between inner and outer radius)
@@ -414,6 +473,9 @@
                     if (forceInnerWall) {
                         // Position RIGHT at the inner wall edge
                         distance = innerRadius + 20; // Very close to the inner wall
+                    } else if (forceOuterWall) {
+                        // Position RIGHT at the outer wall edge
+                        distance = outerRadius - 20; // Very close to the outer wall
                     } else {
                         distance = innerRadius + 20 + Math.random() * (outerRadius - innerRadius - 40);
                     }
@@ -448,8 +510,9 @@
                 
                 // Calculate velocity: 80% move counter-clockwise, 20% move randomly
                 let vx, vy;
-                const isCounterClockwise = forceInnerWall ? true : Math.random() < 0.8; // Inner wall huggers always CCW
-                const hugsInnerWall = forceInnerWall; // First few are always inner wall huggers
+                const isCounterClockwise = (forceInnerWall || forceOuterWall) ? true : Math.random() < 0.8; // Wall huggers always CCW
+                const hugsInnerWall = forceInnerWall;
+                const hugsOuterWall = forceOuterWall;
                 
                 if (isCounterClockwise) {
                     // Counter-clockwise tangential movement
@@ -462,9 +525,9 @@
                     const tangentVx = (dy / dist) * tangentSpeed;
                     const tangentVy = (-dx / dist) * tangentSpeed;
                     
-                    if (hugsInnerWall) {
-                        // Inner wall huggers: PURE tangential movement, no radial component
-                        // This makes them circle the inner wall perfectly
+                    if (hugsInnerWall || hugsOuterWall) {
+                        // Wall huggers: PURE tangential movement, no radial component
+                        // This makes them circle their respective wall perfectly
                         vx = tangentVx;
                         vy = tangentVy;
                     } else {
@@ -489,12 +552,12 @@
                 }
                 
                 // Speed variations: 10% stationary, 10% double speed, 80% normal
-                // BUT: forced inner wall huggers are never stationary
+                // BUT: forced wall huggers are never stationary
                 const speedRoll = Math.random();
                 let speedMultiplier = 1.0; // Normal speed
                 
-                if (!forceInnerWall && speedRoll < 0.1) {
-                    // 10% stationary dancers (but not inner wall huggers)
+                if (!(forceInnerWall || forceOuterWall) && speedRoll < 0.1) {
+                    // 10% stationary dancers (but not wall huggers)
                     speedMultiplier = 0;
                     vx = 0;
                     vy = 0;
@@ -520,6 +583,7 @@
                     color: getObstacleColor(i),
                     isCounterClockwise: isCounterClockwise, // Track movement type
                     hugsInnerWall: hugsInnerWall, // Dancers that stay near inner wall
+                    hugsOuterWall: hugsOuterWall, // Dancers that stay near outer wall
                     speedMultiplier: speedMultiplier, // Track speed type (0 = stationary, 1 = normal, 2 = fast)
                     femaleFirst: Math.random() < 0.5, // Random order: 💃🕺 or 🕺💃
                     skinTone1: skinTone1, // Skin tone for first dancer
@@ -641,40 +705,47 @@
             const x = player.x;
             const y = player.y;
 
-            // Reduced glow effect (less fuzzy)
-            const gradient = ctx.createRadialGradient(x, y, 0, x, y, player.size * 1.3);
-            gradient.addColorStop(0, player.color);
-            gradient.addColorStop(0.6, player.color + '44');
-            gradient.addColorStop(1, 'transparent');
-            
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(x, y, player.size * 1.3, 0, Math.PI * 2);
-            ctx.fill();
+            // Update facing direction based on horizontal velocity
+            if (Math.abs(player.vx) > 0.2) {
+                const previousFacing = player.facingRight;
+                
+                if (player.vx > 0) {
+                    player.facingRight = true;
+                } else {
+                    player.facingRight = false;
+                }
+                
+                // Play swap sound if direction changed
+                if (previousFacing !== player.facingRight) {
+                    swapSound.currentTime = 0; // Reset to start
+                    swapSound.play().catch(e => {}); // Ignore errors if sound fails
+                }
+            }
 
-            // Core
-            ctx.fillStyle = player.color;
-            ctx.beginPath();
-            ctx.arc(x, y, player.size, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Inner highlight
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.beginPath();
-            ctx.arc(x - 2, y - 2, player.size * 0.3, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Direction indicator based on velocity
-            if (Math.abs(player.vx) > 0.1 || Math.abs(player.vy) > 0.1) {
-                const dirAngle = Math.atan2(player.vy, player.vx);
-                const dirX = x + Math.cos(dirAngle) * (player.size + 5);
-                const dirY = y + Math.sin(dirAngle) * (player.size + 5);
-                ctx.strokeStyle = player.color;
-                ctx.lineWidth = 2;
+            // Draw the player image if loaded
+            if (playerImage.complete && playerImage.naturalWidth > 0) {
+                const imageSize = player.size * 2; // Make it bigger
+                
+                ctx.save(); // Save current canvas state
+                
+                // Translate to player position
+                ctx.translate(x, y);
+                
+                // Flip horizontally if facing left
+                if (!player.facingRight) {
+                    ctx.scale(-1, 1);
+                }
+                
+                // Draw image centered at origin
+                ctx.drawImage(playerImage, -imageSize / 2, -imageSize / 2, imageSize, imageSize);
+                
+                ctx.restore(); // Restore canvas state
+            } else {
+                // Fallback to circle if image not loaded yet
+                ctx.fillStyle = player.color;
                 ctx.beginPath();
-                ctx.moveTo(x, y);
-                ctx.lineTo(dirX, dirY);
-                ctx.stroke();
+                ctx.arc(x, y, player.size, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
 
@@ -760,9 +831,38 @@
                         obstacle.vy = tangentVy;
                     }
                 }
+                
+                // For outer wall huggers, constantly pull them toward the outer target radius
+                if (obstacle.hugsOuterWall) {
+                    const targetRadius = outerRadius - 20; // Very close to outer wall
+                    const radiusDiff = distFromCenter - targetRadius;
+                    
+                    // Apply strong correction force to keep them locked at the outer wall
+                    const correctionStrength = 0.5; // Strong pull back to target
+                    const correctionX = -(dx / distFromCenter) * radiusDiff * correctionStrength;
+                    const correctionY = -(dy / distFromCenter) * radiusDiff * correctionStrength;
+                    
+                    obstacle.x += correctionX;
+                    obstacle.y += correctionY;
+                    
+                    // Recalculate after correction
+                    const dx2 = obstacle.x - centerX;
+                    const dy2 = obstacle.y - centerY;
+                    const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+                    
+                    // Also ensure they keep moving tangentially
+                    const currentSpeed = Math.sqrt(obstacle.vx * obstacle.vx + obstacle.vy * obstacle.vy);
+                    if (currentSpeed > 0.1) {
+                        // Pure tangential velocity
+                        const tangentVx = (dy2 / dist2) * currentSpeed;
+                        const tangentVy = (-dx2 / dist2) * currentSpeed;
+                        obstacle.vx = tangentVx;
+                        obstacle.vy = tangentVy;
+                    }
+                }
 
-                // Bounce off outer boundary - skip for inner wall huggers
-                if (!obstacle.hugsInnerWall && distFromCenter > outerRadius - obstacle.size - obstacle.separation - 10) {
+                // Bounce off outer boundary - skip for wall huggers
+                if (!obstacle.hugsInnerWall && !obstacle.hugsOuterWall && distFromCenter > outerRadius - obstacle.size - obstacle.separation - 10) {
                     // Normalize direction vector
                     const nx = dx / distFromCenter;
                     const ny = dy / distFromCenter;
@@ -803,8 +903,8 @@
                     }
                 }
 
-                // Bounce off inner boundary (hole) - skip for inner wall huggers, they have their own correction
-                if (!obstacle.hugsInnerWall && distFromCenter < innerRadius + obstacle.size + obstacle.separation + 10) {
+                // Bounce off inner boundary (hole) - skip for wall huggers, they have their own correction
+                if (!obstacle.hugsInnerWall && !obstacle.hugsOuterWall && distFromCenter < innerRadius + obstacle.size + obstacle.separation + 10) {
                     // Normalize direction vector
                     const nx = dx / distFromCenter;
                     const ny = dy / distFromCenter;
@@ -868,8 +968,8 @@
                     }
                 }
                 
-                // For counter-clockwise obstacles, occasionally adjust speed and trajectory (skip stationary and inner wall huggers)
-                if (!obstacle.hugsInnerWall && obstacle.isCounterClockwise && obstacle.speedMultiplier > 0 && Math.random() < 0.015) {
+                // For counter-clockwise obstacles, occasionally adjust speed and trajectory (skip stationary and wall huggers)
+                if (!obstacle.hugsInnerWall && !obstacle.hugsOuterWall && obstacle.isCounterClockwise && obstacle.speedMultiplier > 0 && Math.random() < 0.015) {
                     const currentSpeed = Math.sqrt(obstacle.vx * obstacle.vx + obstacle.vy * obstacle.vy);
                     const baseSpeed = 0.3 + (gameState.level - 1) * 0.15;
                     const targetSpeed = baseSpeed * (0.8 + Math.random() * 0.4) * obstacle.speedMultiplier;
@@ -1442,6 +1542,27 @@
         // Initialize and start
         initObstacles();
         gameLoop();
+        
+        // Music toggle functionality
+        const musicToggle = document.getElementById('musicToggle');
+        
+        musicToggle.addEventListener('click', () => {
+            if (musicPlaying) {
+                // Stop music
+                bgMusic.pause();
+                musicPlaying = false;
+                musicToggle.classList.remove('playing');
+                musicToggle.textContent = '🎵';
+            } else {
+                // Start music
+                bgMusic.play().catch(e => {
+                    console.log('Music playback failed:', e);
+                });
+                musicPlaying = true;
+                musicToggle.classList.add('playing');
+                musicToggle.textContent = '🎶';
+            }
+        });
     </script>
 </body>
 </html>
