@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Milonga</title>
+    <title>Tango Cafe Simulator</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght:700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
         * {
@@ -23,7 +23,7 @@
         }
 
         body {
-            background: radial-gradient(circle at center, #1a0033 0%, var(--dark-bg) 100%);
+            background: radial-gradient(circle at center, #6B4E3D 0%, #4A3426 100%);
             font-family: 'Share Tech Mono', monospace;
             color: var(--neon-cyan);
             min-height: 100vh;
@@ -294,7 +294,7 @@
 </head>
 <body>
     <div class="game-container">
-        <h1>Neon Milonga</h1>
+        <h1>Tango Cafe Simulator</h1>
         
         <div class="info-panel">
             <div class="info-item">
@@ -327,6 +327,7 @@
 
         <div class="game-over" id="gameOver">
             <h2>Tanda Failed</h2>
+            <p style="font-size: 1.2em; margin: -10px 0 10px 0; color: #ff6b00;">Your Navigation Blows</p>
             <p>Final Score: <span id="finalScore"></span></p>
             <button onclick="restartGame()">Dance Again</button>
         </div>
@@ -511,27 +512,50 @@
         }
 
         function drawBackground() {
-            // Draw inner circle (hole)
+            // Add subtle tile pattern to outer cafe floor
+            ctx.strokeStyle = 'rgba(74, 52, 38, 0.3)';
+            ctx.lineWidth = 1;
+            const tileSize = 40;
+            for (let x = 0; x <= canvas.width; x += tileSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= canvas.height; y += tileSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw wood floor (dance ring area)
+            ctx.fillStyle = '#C19A6B'; // Light brown wood color
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw inner circle (hole) - cut out center
             ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
             ctx.beginPath();
             ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
             ctx.fill();
             
             // Draw inner edge glow (reduced)
-            ctx.strokeStyle = 'rgba(191, 0, 255, 0.6)';
+            ctx.strokeStyle = 'rgba(139, 90, 43, 0.6)'; // Darker brown for inner edge
             ctx.lineWidth = 3;
             ctx.shadowBlur = 10;
-            ctx.shadowColor = '#bf00ff';
+            ctx.shadowColor = '#8B5A2B';
             ctx.beginPath();
             ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
             ctx.stroke();
             ctx.shadowBlur = 0;
 
             // Draw outer boundary (reduced)
-            ctx.strokeStyle = 'rgba(0, 255, 249, 0.6)';
+            ctx.strokeStyle = 'rgba(139, 90, 43, 0.6)'; // Darker brown for outer edge
             ctx.lineWidth = 3;
             ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00fff9';
+            ctx.shadowColor = '#8B5A2B';
             ctx.beginPath();
             ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
             ctx.stroke();
@@ -571,6 +595,23 @@
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
                 ctx.stroke();
+            }
+            
+            // Draw tables with chairs around the outside (spectators)
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            const numTables = 12; // Number of tables around the ring
+            const tableDistance = outerRadius + 30; // Distance from center (closer to stay in canvas)
+            
+            for (let i = 0; i < numTables; i++) {
+                const angle = (i / numTables) * Math.PI * 2;
+                const x = centerX + Math.cos(angle) * tableDistance;
+                const y = centerY + Math.sin(angle) * tableDistance;
+                
+                // Draw two chairs side by side (🪑🪑)
+                ctx.fillText('🪑🪑', x, y);
             }
         }
 
@@ -1304,6 +1345,10 @@
 
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Fill with warm cafe tile/floor color (darker brown/terracotta)
+            ctx.fillStyle = '#5C4033';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             drawBackground();
             drawObstacles();
