@@ -395,6 +395,10 @@
         const swapSound = new Audio('swap.wav'); // Sound should be in same folder as HTML
         swapSound.volume = 0.3; // Set volume to 30% so it's not too loud
         
+        // Load collision sound effect
+        const collisionSound = new Audio('collision.wav'); // Sound when hitting dancers
+        collisionSound.volume = 0.4; // Slightly louder for impact
+        
         // Load background music
         const bgMusic = new Audio('puntazo.mp3'); // Background music
         bgMusic.loop = true; // Loop the music
@@ -416,7 +420,7 @@
             vy: 0,
             speed: 2.5,
             friction: 0.88,
-            size: 18,
+            size: 22,
             color: '#ffff00',
             lastProgressMilestone: 0,
             previousAngle: 0,
@@ -578,7 +582,7 @@
                     y: y,
                     vx: vx,
                     vy: vy,
-                    size: 15, // Emoji size
+                    size: 12, // Emoji size (smaller than player)
                     separation: 25 + Math.random() * 10, // Distance between dancers
                     color: getObstacleColor(i),
                     isCounterClockwise: isCounterClockwise, // Track movement type
@@ -721,6 +725,17 @@
                     swapSound.play().catch(e => {}); // Ignore errors if sound fails
                 }
             }
+
+            // Draw neon glow effect around player
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, player.size * 1.5);
+            gradient.addColorStop(0, 'rgba(0, 255, 249, 0.8)'); // Bright cyan center
+            gradient.addColorStop(0.4, 'rgba(0, 255, 249, 0.4)');
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, player.size * 1.5, 0, Math.PI * 2);
+            ctx.fill();
 
             // Draw the player image if loaded
             if (playerImage.complete && playerImage.naturalWidth > 0) {
@@ -1027,23 +1042,23 @@
                 const x2 = obstacle.x - Math.cos(dirAngle) * offset;
                 const y2 = obstacle.y - Math.sin(dirAngle) * offset;
 
-                // Check collision with first circle
+                // Check collision with first circle (reduced player hitbox for forgiveness)
                 const distance1 = Math.sqrt(
                     Math.pow(player.x - x1, 2) + 
                     Math.pow(player.y - y1, 2)
                 );
 
-                if (distance1 < player.size + obstacle.size) {
+                if (distance1 < player.size * 0.65 + obstacle.size) {
                     return true;
                 }
 
-                // Check collision with second circle
+                // Check collision with second circle (reduced player hitbox for forgiveness)
                 const distance2 = Math.sqrt(
                     Math.pow(player.x - x2, 2) + 
                     Math.pow(player.y - y2, 2)
                 );
 
-                if (distance2 < player.size + obstacle.size) {
+                if (distance2 < player.size * 0.65 + obstacle.size) {
                     return true;
                 }
             }
@@ -1192,6 +1207,10 @@
         }
 
         function loseLife() {
+            // Play collision sound
+            collisionSound.currentTime = 0; // Reset to start
+            collisionSound.play().catch(e => {}); // Ignore errors if sound fails
+            
             gameState.lives--;
             updateLivesDisplay();
             
